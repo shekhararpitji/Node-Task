@@ -2,9 +2,15 @@ const mongoose = require("mongoose");
 
 const tokenSchema = new mongoose.Schema(
   {
-    username: String,
-    access_token: String,
-    expiry:Number
+    userId: {
+      type: String,
+      ref: "User",
+      required: true
+    },
+    access_token: {
+      type: String,
+      required: true,
+    }
   },
   { timestamps: true }
 );
