@@ -1,62 +1,19 @@
-const bcrypt = require("bcryptjs");
 const express = require("express");
-const bodyParser = require('body-parser');
-const User=require('../src/models/user.model');
-require("./config")
-   
+const { userLogin, userRegister, userGet, loginUrl, registerUrl, getUrl, userDelete, deleteUrl } = require("./constants");
+require("./db");
 
 const app = express();
 
 app.use(express.json());
-let workFactor=8;
-let hashedPass;
 
+app.use(userLogin, require(loginUrl));
 
+app.use(userRegister, require(registerUrl));
 
-app.get('/user/register', async (req, res) => {
-  res.send("hello")
- 
-})  
+app.use(userGet, require(getUrl))
 
-  app.post('/user/register', async (req, res) => {
-    const { username, password, confirmPassword, email, firstname, lastname } = req.body;
+app.use(userDelete, require(deleteUrl))
 
-    const isUserPresent=await User.findOne({"username":username});
-    const isUserPresen=await User.findOne({"email":email});
-
-
-
-    if(isUserPresent!==null||isUserPresen!==null){
-      res.send("user already present")
-    }
-    else if(password!==confirmPassword){
-      console.log("password not matched")
-    }else {
-      bcrypt
-  .genSalt(workFactor)
-  .then(salt => {
-    console.log(`Salt: ${salt}`);
-    hashedPass= bcrypt.hash(password, salt);
-  })
-  .then(hash => {
-    console.log(`Hash: ${hash}`);
-  })
-  .catch(err => console.error(err.message));
-
-      let data=new User({
-        username,
-        email,
-        firstname,
-        lastname,
-        password:hashedPass
-      });
-      let result=await data.save();
-      res.send("Done");
-    }
-
-  })  
-  
-
-  app.listen(5600, () => {
-    console.log('Server is running on http://localhost:5600');
-  });
+app.listen(5600, () => {
+  console.log("Server is running on http://localhost:5600");
+});
