@@ -1,8 +1,7 @@
-const express = require("express");
-const bcrypt = require("bcryptjs");
-const User = require("../models/userRedg");
-const { body, validationResult } = require("express-validator");
-const router = express.Router();
+const {body}=require('express-validator')
+const User = require("../models/userModel");
+
+
 
 const isUsernameUnique = async (username) => {
   const isUserPresent = await User.findOne({ username: username });
@@ -22,9 +21,7 @@ const isEmailUnique = async (email) => {
 
   return false;
 };
-router.post(
-  "/",
-  [
+exports.redgMiddle=[
     body("username")
       .custom(isUsernameUnique)
       .withMessage("Username is already taken")
@@ -44,32 +41,17 @@ router.post(
     body("confirmPassword")
       .custom((value, { req }) => value === req.body.password)
       .withMessage("Passwords do not match"),
-  ],
-  async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+  ]
+
+  exports.getMidlle=async(req,res,next)=>{
+    const user=await User.findOne({"_id":req.headers.access_token})
+
+    if(user){return next();}
+    else{
+        
+        return res.send("Invalid");
     }
 
-    const { username, password, email, firstName, lastName } = req.body;
-    const salt = await bcrypt.genSalt(10);
-    let hashpassword = await bcrypt.hash(password, salt);
+ }
 
-    try {
-      const user = new User({
-        username,
-        password: hashpassword,
-        email,
-        firstName,
-        lastName,
-      });
-
-      await user.save();
-      res.json({ message: "User registered successfully" });
-    } catch (error) {
-      console.log(error);
-      res.status(500).send("Server Error");
-    }
-  }
-);
-module.exports = router;
+ exports.loginMiddle=[body("username").notEmpty(), body("password").notEmpty()]
