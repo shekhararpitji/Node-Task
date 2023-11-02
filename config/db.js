@@ -1,2 +1,8 @@
 const mongoose = require("mongoose");
-mongoose.connect("mongodb://localhost:27017/question-1");
+require('dotenv').config();
+try{
+    mongoose.connect(process.env.dburl);
+}catch(error){
+    console.log(error);
+    res.status(500).send("Database connection error");
+}

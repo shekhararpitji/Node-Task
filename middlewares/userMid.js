@@ -1,6 +1,6 @@
-const {body}=require('express-validator')
+const { body } = require("express-validator");
 const User = require("../models/userModel");
-
+const UserToken = require("../models/tokenModel");
 
 
 const isUsernameUnique = async (username) => {
@@ -21,37 +21,45 @@ const isEmailUnique = async (email) => {
 
   return false;
 };
-exports.redgMiddle=[
-    body("username")
-      .custom(isUsernameUnique)
-      .withMessage("Username is already taken")
-      .isLength({ min: 4 })
-      .withMessage("Username must be at least 4 characters long"),
+exports.redgMiddle = [
+  body("username")
+    .custom(isUsernameUnique)
+    .withMessage("Username is already taken")
+    .isLength({ min: 4 })
+    .withMessage("Username must be at least 4 characters long"),
 
-    body("email")
-      .custom(isEmailUnique)
-      .withMessage("Email is already registered")
-      .isEmail()
-      .withMessage("Invalid email"),
+  body("email")
+    .custom(isEmailUnique)
+    .withMessage("Email is already registered")
+    .isEmail()
+    .withMessage("Invalid email"),
 
-    body("password")
-      .isLength({ min: 6 })
-      .withMessage("Password must be at least 6 characters long"),
+  body("password")
+    .isLength({ min: 6 })
+    .withMessage("Password must be at least 6 characters long"),
 
-    body("confirmPassword")
-      .custom((value, { req }) => value === req.body.password)
-      .withMessage("Passwords do not match"),
-  ]
+  body("confirmPassword")
+    .custom((value, { req }) => value === req.body.password)
+    .withMessage("Passwords do not match"),
+];
 
-  exports.getMidlle=async(req,res,next)=>{
-    const user=await User.findOne({"_id":req.headers.access_token})
-
-    if(user){return next();}
-    else{
-        
-        return res.send("Invalid");
+exports.authMiddle = async (req, res, next) => {
+  const access_token = req.headers["access_token"];
+  const userToken = await UserToken.findOne({ access_token });
+ 
+  if (!userToken) {
+    return res.status(401).send("Invalid access_token");
+  }
+  const now = new Date();
+    if (now > userToken.expiry) {
+      return res.status(400).send("Access Token has expired");
     }
+    req.userId = userToken.userId;
+  next();
+};
 
- }
+exports.loginMiddle = [
+  body("username").notEmpty(),
+  body("password").notEmpty(),
+];
 
- exports.loginMiddle=[body("username").notEmpty(), body("password").notEmpty()]
