@@ -1,21 +1,33 @@
 const express = require("express");
-const userMid = require("../middlewares/userMid");
+const jwtVerify = require("../middlewares/jwtVerify")
 const userController = require("../controllers/userController");
+const LocalStrategy = require('passport-local').Strategy;
+const passMiddle = require('../middlewares/passportMid');
+const passport = require('passport');
+
 
 const router = express.Router();
 
-router.post("/register", userMid.redgMiddle, userController.registerCtrl);
+passport.use(new LocalStrategy(passMiddle.passMid
+   
+  ));
 
-router.post("/address", userMid.authMiddle, userController.addressCtrl);
 
-router.post("/login", userMid.loginMiddle, userController.loginCtrl);
+router.post("/address", jwtVerify.authMiddle, userController.addressCtrl);
 
-router.put("/delete", userMid.authMiddle, userController.deleteCtrl);
 
-router.get("/get", userMid.authMiddle, userController.getAllCtrl);
+router.put("/delete", jwtVerify.authMiddle, userController.deleteCtrl);
 
-router.get("/list/:page", userMid.authMiddle, userController.listController);
+router.delete("/user/address", jwtVerify.authMiddle, userController.deleteAddressCtrl);
 
-router.get("/get/:id",userMid.authMiddle,userController.addressListController);
+router.get("/get", jwtVerify.authMiddle, userController.getAllCtrl);
+
+router.get("/list/:page", jwtVerify.authMiddle, userController.listController);
+
+router.get("/get/:id",jwtVerify.authMiddle,userController.addressListController);
+
+router.post('/login', passport.authenticate('local'),userController.loginCtrl);
+
+router.post('/register', passport.authenticate('local'),userController.registerCtrl);
 
 module.exports = router;
