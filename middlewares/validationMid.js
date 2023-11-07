@@ -39,6 +39,10 @@ exports.redgMiddle = [
   body("confirmPassword")
     .custom((value, { req }) => value === req.body.password)
     .withMessage("Passwords do not match"),
+
+  body("firstName").notEmpty(),
+
+  body("lastName").notEmpty(),
 ];
 
 
