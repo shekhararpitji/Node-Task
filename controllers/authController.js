@@ -1,5 +1,8 @@
 const User = require("../models/userModel");
 const jwt = require("jsonwebtoken");
+const multer  = require('multer')
+const Email= require("../utils/emailUtil")
+
 
 exports.forgetPassController = async (req, res) => {
   try {
@@ -19,6 +22,7 @@ exports.forgetPassController = async (req, res) => {
       { email },
       { $set: { resetToken: resetToken } }
     );
+    Email.passwordResetMail(email, resetToken);
     res.status(200).send(user.email);
   } catch (error) {
     console.error(error);
@@ -51,4 +55,15 @@ exports.resetPassword=async(req,res)=>{
     res.status(500).send("Server Error");
   }
 
+}
+
+exports.profileImageController=(req,res)=>{
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No image provided" });
+    }
+    res.json({ message: "Profile image uploaded successfully" });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
 }

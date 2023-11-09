@@ -15,7 +15,6 @@ app.use(session({
   resave: false,
   saveUninitialized: true
 }));
-// app.use(passport.session());
 
 app.use('/user',require('./routes/userRoutes'));
 
