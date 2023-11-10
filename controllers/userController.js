@@ -4,20 +4,24 @@ const User = require("../models/userModel");
 const bcrypt = require("bcryptjs");
 const tokenModel = require("../models/tokenModel");
 const Address = require("../models/addressModel");
-const UserToken = require("../models/tokenModel");
+const Email= require("../utils/emailUtil")
 
-exports.loginCtrl = async (req, res) => {
+exports.loginController = async (req, res) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
-  const { username } = req.body;
+  const { username, password } = req.body;
 
   try {
     const user = await User.findOne({ username: username });
     if (!user) {
-      return res.status(401).json({ message: "username not found" });
+      return res.status(404).json({ message: "username not found" });
+    }
+    const check = bcrypt.compareSync(password, user.password);
+    if (!check) {
+      return res.status(401).json({ message: "Invalid password" });
     }
 
     const access_token = jwt.sign(
@@ -41,13 +45,7 @@ exports.loginCtrl = async (req, res) => {
   }
 };
 
-exports.registerCtrl = async (req, res) => {
-  const errors = validationResult(req.body);
-  if (!errors.isEmpty()) {
-    console.error("error in validation");
-    return res.status(400).json({ errors: errors.array() });
-  }
-
+exports.registerController = async (req, res) => {
   const { username, password, email, firstName, lastName } = req.body;
   const salt = 10;
   const hashpassword = await bcrypt.hash(password, salt);
@@ -62,24 +60,25 @@ exports.registerCtrl = async (req, res) => {
     });
 
     await user.save();
-    res.status(201).json({ message: "User registered successfully" });
+    Email.registrationMail(email);
+    return res.status(201).json({ message: "User registered successfully" });
   } catch (error) {
     console.error(error);
     res.status(500).send("Server Error");
   }
 };
 
-exports.deleteCtrl = async (req, res) => {
+exports.deleteController = async (req, res) => {
   try {
     const user = await User.deleteOne({ _id: req.headers.access_token });
-    res.status(200).json({ user });
+    res.status(204).json({ user });
   } catch (error) {
     console.error(error);
     res.status(400).send("Server Error");
   }
 };
 
-exports.getAllCtrl = async (req, res) => {
+exports.getAllController = async (req, res) => {
   try {
     const user = await User.find();
     res.status(200).send(user);
@@ -103,21 +102,22 @@ exports.listController = async (req, res) => {
   }
 };
 
-exports.addressCtrl = async (req, res) => {
+exports.addressController = async (req, res) => {
   try {
-    const access_token = req.get("authorization").split(" ")[1];
-    const userToken = await UserToken.findOne({ access_token: access_token });
+    const user_id = req.userId;
     const { address, city, state, pin_code, phone_no } = req.body;
     const addressNew = new Address({
-      user_id: userToken._id,
+      user_id,
       address,
       city,
       state,
       pin_code,
       phone_no,
     });
+    await addressNew.save();
+
     await User.findByIdAndUpdate(
-      userToken._id,
+      user_id,
       { $push: { addresses: addressNew._id } },
       { new: true, upsert: true }
     );
@@ -130,35 +130,41 @@ exports.addressCtrl = async (req, res) => {
 };
 
 exports.addressListController = async (req, res) => {
-  const userId = req.params.id;
   try {
-    const address = await Address.findOne({ user_id: userId });
+    const user = await User.findOne({ _id: req.params.id }).populate(
+      "addresses"
+    );
 
-    if (!address) {
+    if (!user) {
       return res.status(404).json({ message: "Address not found" });
     }
 
-    res.status(200).json({ address });
+    res.status(200).json({ user });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
 
-exports.deleteAddressCtrl = async (req, res) => {
- try{
-  const addressIds = req.body.addressIds;
-  const user = req.userId;
+exports.deleteAddressController = async (req, res) => {
+  try {
+    const addressIds = req.body.addressIds;
 
-  if (!addressIds || !Array.isArray(addressIds)) {
-    return res.status(400).json({ error: "Invalid request format" });
+    if (!addressIds || !Array.isArray(addressIds)) {
+      return res.status(400).json({ error: "Invalid request format" });
+    }
+
+    await Address.deleteMany({ _id: { $in: addressIds } });
+
+    await User.findByIdAndUpdate(
+      user_id,
+      { $pull: { addresses: addressIds } },
+      { new: true, upsert: true }
+    );
+
+    res.json({ message: "Addresses deleted successfully" });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server Error" });
   }
-
-  await Address.deleteMany({ _id: { $in: addressIds } });
-
-  res.json({ message: "Addresses deleted successfully" });
-}catch(error){
-  console.log(error);
-  return res.status(500).json({message:"Server Error"})
-}
 };
