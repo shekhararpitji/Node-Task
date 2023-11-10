@@ -12,16 +12,12 @@ exports.loginCtrl = async (req, res) => {
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
-  const { username, password } = req.body;
+  const { username } = req.body;
 
   try {
     const user = await User.findOne({ username: username });
     if (!user) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-    const check = bcrypt.compareSync(password, user.password);
-    if (!check) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res.status(401).json({ message: "username not found" });
     }
 
     const access_token = jwt.sign(
@@ -48,7 +44,7 @@ exports.loginCtrl = async (req, res) => {
 exports.registerCtrl = async (req, res) => {
   const errors = validationResult(req.body);
   if (!errors.isEmpty()) {
-    console.log("error in validation");
+    console.error("error in validation");
     return res.status(400).json({ errors: errors.array() });
   }
 
@@ -68,7 +64,7 @@ exports.registerCtrl = async (req, res) => {
     await user.save();
     res.status(201).json({ message: "User registered successfully" });
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.status(500).send("Server Error");
   }
 };
@@ -88,7 +84,7 @@ exports.getAllCtrl = async (req, res) => {
     const user = await User.find();
     res.status(200).send(user);
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.status(500).send("Server Error");
   }
 };
@@ -102,7 +98,7 @@ exports.listController = async (req, res) => {
     const printUsers = data.slice(startIndex, endIndex);
     res.status(200).json({ users: printUsers });
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.status(500).send("Server Error");
   }
 };
@@ -128,7 +124,7 @@ exports.addressCtrl = async (req, res) => {
 
     res.status(200).json({ message: "Address saved", data: address });
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.status(400).send("Invalid Address");
   }
 };
@@ -147,4 +143,22 @@ exports.addressListController = async (req, res) => {
     console.error(error);
     res.status(500).json({ message: "Internal server error" });
   }
+};
+
+exports.deleteAddressCtrl = async (req, res) => {
+ try{
+  const addressIds = req.body.addressIds;
+  const user = req.userId;
+
+  if (!addressIds || !Array.isArray(addressIds)) {
+    return res.status(400).json({ error: "Invalid request format" });
+  }
+
+  await Address.deleteMany({ _id: { $in: addressIds } });
+
+  res.json({ message: "Addresses deleted successfully" });
+}catch(error){
+  console.log(error);
+  return res.status(500).json({message:"Server Error"})
+}
 };
