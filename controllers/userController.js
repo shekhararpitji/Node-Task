@@ -4,7 +4,7 @@ const User = require("../models/userModel");
 const bcrypt = require("bcryptjs");
 const tokenModel = require("../models/tokenModel");
 const Address = require("../models/addressModel");
-const UserToken = require("../models/tokenModel");
+const Email= require("../utils/emailUtil")
 
 exports.loginController = async (req, res) => {
   const errors = validationResult(req);
@@ -12,12 +12,12 @@ exports.loginController = async (req, res) => {
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
-  const { username,password } = req.body;
+  const { username, password } = req.body;
 
   try {
     const user = await User.findOne({ username: username });
     if (!user) {
-      return res.status(404 ).json({ message: "username not found" });
+      return res.status(404).json({ message: "username not found" });
     }
     const check = bcrypt.compareSync(password, user.password);
     if (!check) {
@@ -46,8 +46,6 @@ exports.loginController = async (req, res) => {
 };
 
 exports.registerController = async (req, res) => {
-  
-
   const { username, password, email, firstName, lastName } = req.body;
   const salt = 10;
   const hashpassword = await bcrypt.hash(password, salt);
@@ -62,6 +60,7 @@ exports.registerController = async (req, res) => {
     });
 
     await user.save();
+    Email.registrationMail(email);
     return res.status(201).json({ message: "User registered successfully" });
   } catch (error) {
     console.error(error);
@@ -115,12 +114,12 @@ exports.addressController = async (req, res) => {
       pin_code,
       phone_no,
     });
-     await addressNew.save();
+    await addressNew.save();
 
     await User.findByIdAndUpdate(
-     user_id,
-     { $push: { addresses: addressNew._id } },
-     { new: true, upsert: true }
+      user_id,
+      { $push: { addresses: addressNew._id } },
+      { new: true, upsert: true }
     );
 
     res.status(200).json({ message: "Address saved", data: address });
@@ -132,7 +131,9 @@ exports.addressController = async (req, res) => {
 
 exports.addressListController = async (req, res) => {
   try {
-    const user = await User.findOne({ _id: req.params.id }).populate('addresses');
+    const user = await User.findOne({ _id: req.params.id }).populate(
+      "addresses"
+    );
 
     if (!user) {
       return res.status(404).json({ message: "Address not found" });
@@ -146,27 +147,24 @@ exports.addressListController = async (req, res) => {
 };
 
 exports.deleteAddressController = async (req, res) => {
- try{
-  const addressIds = req.body.addressIds;
-  const user = req.userId;
+  try {
+    const addressIds = req.body.addressIds;
 
-  if (!addressIds || !Array.isArray(addressIds)) {
-    return res.status(400).json({ error: "Invalid request format" });
+    if (!addressIds || !Array.isArray(addressIds)) {
+      return res.status(400).json({ error: "Invalid request format" });
+    }
+
+    await Address.deleteMany({ _id: { $in: addressIds } });
+
+    await User.findByIdAndUpdate(
+      user_id,
+      { $pull: { addresses: addressIds } },
+      { new: true, upsert: true }
+    );
+
+    res.json({ message: "Addresses deleted successfully" });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server Error" });
   }
-
-  await Address.deleteMany({ _id: { $in: addressIds } });
-
-  await User.findByIdAndUpdate(
-    user_id,
-    { $pull: { addresses: addressIds } },
-    { new: true, upsert: true }
-   );
-
-  res.json({ message: "Addresses deleted successfully" });
-}catch(error){
-  console.log(error);
-  return res.status(500).json({message:"Server Error"})
-}
 };
-
-
