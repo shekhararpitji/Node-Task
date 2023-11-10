@@ -1,12 +1,14 @@
 const { validationResult } = require("express-validator");
+const jwt = require("jsonwebtoken");
 const User = require("../models/userModel");
 const bcrypt = require("bcryptjs");
 const tokenModel = require("../models/tokenModel");
 const Address = require("../models/addressModel");
+const UserToken = require("../models/tokenModel");
 
 exports.loginCtrl = async (req, res) => {
   const errors = validationResult(req);
-  
+
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
@@ -15,30 +17,28 @@ exports.loginCtrl = async (req, res) => {
   try {
     const user = await User.findOne({ username: username });
     if (!user) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      return res.status(401).json({ message: "Invalid credentials" });
     }
     const check = bcrypt.compareSync(password, user.password);
-    if (check) {
-      console.log("password was true");
-    } else {
-      return res.status(400).json({ message: "Invalid credentials" });
+    if (!check) {
+      return res.status(401).json({ message: "Invalid credentials" });
     }
-    const userId = req.body.user_id;
-    const access_token = require("crypto")
-      .createHash("md5")
-      .update(Math.random().toString())
-      .digest("hex");
-    const expiry = new Date();
-    expiry.setHours(expiry.getHours() + 1);
+
+    const access_token = jwt.sign(
+      {
+        userId: user._id,
+      },
+      process.env.SECRET,
+      { expiresIn: "59m" }
+    );
 
     const userToken = new tokenModel({
-      userId,
+      userId: user._id,
       access_token,
-      expiry,
     });
     await userToken.save();
 
-    res.status(200).json({ userToken });
+    res.status(200).json(userToken);
   } catch (error) {
     console.error(error);
     res.status(500).send("Server Error");
@@ -48,7 +48,7 @@ exports.loginCtrl = async (req, res) => {
 exports.registerCtrl = async (req, res) => {
   const errors = validationResult(req.body);
   if (!errors.isEmpty()) {
-    console.log("error first");
+    console.log("error in validation");
     return res.status(400).json({ errors: errors.array() });
   }
 
@@ -75,20 +75,17 @@ exports.registerCtrl = async (req, res) => {
 
 exports.deleteCtrl = async (req, res) => {
   try {
-    console.log("first");
     const user = await User.deleteOne({ _id: req.headers.access_token });
-    res.status(200).json({user});
+    res.status(200).json({ user });
   } catch (error) {
     console.error(error);
     res.status(400).send("Server Error");
   }
 };
 
-exports.getCtrl = async (req, res) => {
+exports.getAllCtrl = async (req, res) => {
   try {
-    const header = req.headers.access_token;
-
-    const user = await User.findOne({ _id: header });
+    const user = await User.find();
     res.status(200).send(user);
   } catch (error) {
     console.log(error);
@@ -103,7 +100,6 @@ exports.listController = async (req, res) => {
   try {
     const data = await User.find();
     const printUsers = data.slice(startIndex, endIndex);
-    console.log(printUsers);
     res.status(200).json({ users: printUsers });
   } catch (error) {
     console.log(error);
@@ -113,17 +109,24 @@ exports.listController = async (req, res) => {
 
 exports.addressCtrl = async (req, res) => {
   try {
+    const access_token = req.get("authorization").split(" ")[1];
+    const userToken = await UserToken.findOne({ access_token: access_token });
     const { address, city, state, pin_code, phone_no } = req.body;
     const addressNew = new Address({
-      user_id,
+      user_id: userToken._id,
       address,
       city,
       state,
       pin_code,
       phone_no,
     });
-    await addressNew.save();
-    res.status(200).send("Address saved", address);
+    await User.findByIdAndUpdate(
+      userToken._id,
+      { $push: { addresses: addressNew._id } },
+      { new: true, upsert: true }
+    );
+
+    res.status(200).json({ message: "Address saved", data: address });
   } catch (error) {
     console.log(error);
     res.status(400).send("Invalid Address");
