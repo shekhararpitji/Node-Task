@@ -1,8 +1,8 @@
 const { body } = require("express-validator");
-const User = require("../models/userModel");
+const User = require("../models/sqlModel");
 
 const isUsernameUnique = async (username) => {
-  const isUserPresent = await User.findOne({ username: username });
+  const isUserPresent = await User.findOne({where:{ username: username }});
   if (isUserPresent !== null) {
     res.send("username already existt");
     return true;
@@ -11,7 +11,7 @@ const isUsernameUnique = async (username) => {
   return false;
 };
 const isEmailUnique = async (email) => {
-  const isUserPresent = await User.findOne({ email: email });
+  const isUserPresent = await User.findOne({where:{ email: email }});
   if (isUserPresent !== null) {
     res.send("user already present");
     return true;

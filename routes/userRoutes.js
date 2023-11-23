@@ -8,12 +8,14 @@ const passport = require('passport');
 
 const router = express.Router();
 
-// passport.use(new LocalStrategy(passMiddle.passMid
+passport.use(new LocalStrategy(passMiddle.passMid
    
-//   ));
+  ));
 
 
-router.post("/address", jwtVerify.authMiddle, userController.addressCtrl);
+router.post("/address",
+ jwtVerify.authMiddle,
+ userController.addressCtrl);
 
 
 router.put("/delete", jwtVerify.authMiddle, userController.deleteCtrl);
@@ -23,17 +25,17 @@ router.delete("/user/address", jwtVerify.authMiddle, userController.deleteAddres
 router.get("/get", jwtVerify.authMiddle, userController.getAllCtrl);
 
 router.get("/list/:page",
-// jwtVerify.authMiddle,
+jwtVerify.authMiddle,
  userController.listController);
 
 router.get("/get/:id",jwtVerify.authMiddle,userController.addressListController);
 
 router.post('/login', 
-// passport.authenticate('local'),
+passport.authenticate('local'),
 userController.loginCtrl);
 
 router.post('/register',
-//  passport.authenticate('local'),
+ passport.authenticate('local'),
  userController.registerCtrl);
 
 module.exports = router;

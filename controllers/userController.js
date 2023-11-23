@@ -5,8 +5,9 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 // const tokenModel = require("../models/tokenModel");
 const sqlToken=require('../models/sqlToken');
-const Address = require("../models/addressModel");
-const UserToken = require("../models/tokenModel");
+// const Address = require("../models/addressModel");
+const Address = require("../models/sqlAddress");
+// const UserToken = require("../models/sqlToken");
 
 exports.loginCtrl = async (req, res) => {
   // const errors = validationResult(req);
@@ -17,7 +18,6 @@ exports.loginCtrl = async (req, res) => {
   const { username } = req.body;
 
   try {
-    // const user = await User.findOne({ username: username });
    const user=await User.findOne({
       where: {
         username,
@@ -27,23 +27,21 @@ exports.loginCtrl = async (req, res) => {
       return res.status(401).json({ message: "username not found" });
     }
 
-    // const access_token = jwt.sign(
-    //   {
-    //     userId: user._id,
-    //   },
-    //   process.env.SECRET,
-    //   { expiresIn: "59m" }
-    // );
+    const access_token = jwt.sign(
+      {
+        userId: user.id,
+      },
+      process.env.SECRET,
+      { expiresIn: "59m" }
+    );
     
 
     const userToken =await sqlToken.create({
      
-     userId:'id',
-     access_token:"token"
-      // userId: user._id,
-      // access_token,
+     userId:user.id,
+     access_token
+      
     });
-    // await userToken.save();
 
     res.status(200).json(userToken);
   } catch (error) {
@@ -53,15 +51,15 @@ exports.loginCtrl = async (req, res) => {
 };
 
 exports.registerCtrl = async (req, res) => {
-  // const errors = validationResult(req.body);
-  // if (!errors.isEmpty()) {
-  //   console.error("error in validation");
-  //   return res.status(400).json({ errors: errors.array() });
-  // }
+  const errors = validationResult(req.body);
+  if (!errors.isEmpty()) {
+    console.error("error in validation");
+    return res.status(400).json({ errors: errors.array() });
+  }
 
   const { username, password, email, firstName, lastName } = req.body;
-  // const salt = 10;
-  // const hashpassword = await bcrypt.hash(password, salt);
+  const salt = 10;
+  const hashpassword = await bcrypt.hash(password, salt);
 
   try {
     await User.create({
@@ -71,15 +69,7 @@ exports.registerCtrl = async (req, res) => {
       firstName,
       lastName,
     });
-    // const user = new User({
-    //   username,
-    //   password: hashpassword,
-    //   email,
-    //   firstName,
-    //   lastName,
-    // });
-
-    // await user.save();
+   
     res.status(201).json({ message: "User registered successfully" });
   } catch (error) {
     console.error(error);
@@ -89,7 +79,9 @@ exports.registerCtrl = async (req, res) => {
 
 exports.deleteCtrl = async (req, res) => {
   try {
-    const user = await User.deleteOne({ _id: req.headers.access_token });
+    const access_token=req.headers.access_token;
+    const user = await User.destroy({where:{ id:access_token }});
+
     res.status(200).json({ user });
   } catch (error) {
     console.error(error);
@@ -99,7 +91,7 @@ exports.deleteCtrl = async (req, res) => {
 
 exports.getAllCtrl = async (req, res) => {
   try {
-    const user = await User.find();
+    const user = await User.findAll();
     res.status(200).send(user);
   } catch (error) {
     console.error(error);
@@ -136,21 +128,18 @@ exports.listController = async (req, res) => {
 exports.addressCtrl = async (req, res) => {
   try {
     const access_token = req.get("authorization").split(" ")[1];
-    const userToken = await UserToken.findOne({ access_token: access_token });
+    const userToken = await sqlToken.findOne({ where: { access_token: access_token } });
     const { address, city, state, pin_code, phone_no } = req.body;
-    const addressNew = new Address({
-      user_id: userToken._id,
+    const addressNew =await Address.create({
+      user_id: userToken.id,
       address,
       city,
       state,
       pin_code,
       phone_no,
     });
-    await User.findByIdAndUpdate(
-      userToken._id,
-      { $push: { addresses: addressNew._id } },
-      { new: true, upsert: true }
-    );
+
+
 
     res.status(200).json({ message: "Address saved", data: address });
   } catch (error) {

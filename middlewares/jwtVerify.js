@@ -1,4 +1,4 @@
-const UserToken = require("../models/tokenModel");
+const UserToken = require("../models/sqlToken");
 const jwt = require("jsonwebtoken");
 
 exports.authMiddle = async (req, res, next) => {

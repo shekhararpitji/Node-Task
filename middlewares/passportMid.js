@@ -1,9 +1,9 @@
 const bcrypt = require("bcryptjs");
-const User = require("../models/userModel");
+const User = require("../models/sqlModel");
 
 exports.passMid = async (username, password, done) => {
   try {
-    const user = await User.findOne({ username: username });
+    const user = await User.findOne({where:{ username: username }});
 
     if (!user) {
       return done(null, false);
