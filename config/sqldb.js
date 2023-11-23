@@ -1,4 +1,4 @@
-const {Sequelize}=require('sequelize');
+const {Sequelize,Model,DataTypes}=require('sequelize');
 let dbConfig={
     db_name:'firstdb',
     db_user:'root1',

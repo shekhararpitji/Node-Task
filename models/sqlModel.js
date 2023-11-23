@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
-const sequelize = require('../config/sqldb')
+const sequelize = require('../config/sqldb');
+const Address = require('./sqlAddress');
 
  const User = sequelize.define('User', {
   username:{
@@ -22,6 +23,7 @@ const sequelize = require('../config/sqldb')
     timestamps: true
 });
 
+User.hasMany(Address);
 
 
 
