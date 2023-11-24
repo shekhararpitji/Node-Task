@@ -22,8 +22,9 @@ const Address = require('./sqlAddress');
     tableName: 'user',
     timestamps: true
 });
-
+  
 User.hasMany(Address);
+Address.belongsTo(User);
 
 
 
