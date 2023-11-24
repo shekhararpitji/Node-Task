@@ -16,7 +16,7 @@ const sequelize = require('../config/sqldb');
     type: DataTypes.INTEGER,
   },
   phone_no: {
-    type: DataTypes.INTEGER
+    type: DataTypes.STRING
   }
 }, {
     tableName: 'address',

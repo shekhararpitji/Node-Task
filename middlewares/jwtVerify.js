@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 exports.authMiddle = async (req, res, next) => {
     try {
       const access_token = req.get("authorization").split(" ")[1];
-      const userToken = await UserToken.findOne({ access_token: access_token });
+      const userToken = await UserToken.findOne({where:{ access_token: access_token }});
       if (!userToken) {
         return res.status(401).send("Invalid access_token");
       }

@@ -7,6 +7,7 @@ const bcrypt = require("bcryptjs");
 const sqlToken=require('../models/sqlToken');
 // const Address = require("../models/addressModel");
 const Address = require("../models/sqlAddress");
+const { Op } = require("sequelize");
 // const UserToken = require("../models/sqlToken");
 
 exports.loginCtrl = async (req, res) => {
@@ -91,7 +92,7 @@ exports.deleteCtrl = async (req, res) => {
 
 exports.getAllCtrl = async (req, res) => {
   try {
-    const user = await User.findAll();
+    const user = await User.findMany();
     res.status(200).send(user);
   } catch (error) {
     console.error(error);
@@ -104,19 +105,8 @@ exports.listController = async (req, res) => {
   const startIndex = page * 10 - 10;
   const endIndex = page * 10;
   try {
-    const status = await User.aggregate([
-      {
-        $match: { firstname: "mike" },
-      },
-      {
-        $group: {
-          _id: null,
-          firstname: { $count: {} },
-        },
-      },
-    ]);
-    console.log(status);
-    const data = await User.find();
+
+    const data = await User.findMany();
     const printUsers = data.slice(startIndex, endIndex);
     res.status(200).json({ users: printUsers });
   } catch (error) {
@@ -130,8 +120,8 @@ exports.addressCtrl = async (req, res) => {
     const access_token = req.get("authorization").split(" ")[1];
     const userToken = await sqlToken.findOne({ where: { access_token: access_token } });
     const { address, city, state, pin_code, phone_no } = req.body;
-    const addressNew =await Address.create({
-      user_id: userToken.id,
+    await Address.create({
+      UserId: userToken.id,
       address,
       city,
       state,
@@ -151,7 +141,7 @@ exports.addressCtrl = async (req, res) => {
 exports.addressListController = async (req, res) => {
   const userId = req.params.id;
   try {
-    const address = await Address.findOne({ user_id: userId });
+    const address = await User.findAll({where:{ id: userId },include:Address});
 
     if (!address) {
       return res.status(404).json({ message: "Address not found" });
@@ -173,7 +163,13 @@ exports.deleteAddressCtrl = async (req, res) => {
       return res.status(400).json({ error: "Invalid request format" });
     }
 
-    await Address.deleteMany({ _id: { $in: addressIds } });
+    await Address.destroy({
+      where: {
+        id: {
+          [Op.in]: addressIds,
+        },
+      },
+    });
 
     res.json({ message: "Addresses deleted successfully" });
   } catch (error) {
